@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.Scanner;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,15 +26,17 @@ public class ChatLink {
             Scanner scanner = new Scanner(System.in)
         ) {
             this.setupUsername(scanner);
+
             serverChannel.connect(new InetSocketAddress(1024));
+            this.sendUUIDToServer(serverChannel);
 
             executorService.execute(() -> this.receiveMessages(serverChannel));
 
             while(true) {
                 this.handleMessageInput(scanner, serverChannel);
             }
-        } catch (IOException e) {
-            System.err.println("An error occurred while connecting to the server.");
+        } catch (IOException | InterruptedException e) {
+            System.err.println("An error occurred while talking to the server.");
             System.exit(1);
         }
     }
@@ -49,22 +52,27 @@ public class ChatLink {
         this.username = username;
     }
 
-    private void handleMessageInput(Scanner scanner, SocketChannel serverChannel) {
-        try {
-            String inputMessage = scanner.nextLine();
+    private void sendUUIDToServer(SocketChannel serverChannel) throws IOException {
+        UUID clientUUID = UUID.nameUUIDFromBytes(this.username.getBytes());
+        buffer.clear().put(clientUUID.toString().getBytes()).flip();
 
-            String formattedMessage = username + ": " + inputMessage;
-            buffer.clear().put(formattedMessage.getBytes()).flip();
-
-            while(buffer.hasRemaining()) {
-                serverChannel.write(buffer);
-            }
-
-            buffer.clear();
-            Thread.sleep(100);
-        } catch (IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+        while(buffer.hasRemaining()) {
+            serverChannel.write(buffer);
         }
+    }
+
+    private void handleMessageInput(Scanner scanner, SocketChannel serverChannel) throws IOException, InterruptedException {
+        String inputMessage = scanner.nextLine();
+
+        String formattedMessage = username + ": " + inputMessage;
+        buffer.clear().put(formattedMessage.getBytes()).flip();
+
+        while(buffer.hasRemaining()) {
+            serverChannel.write(buffer);
+        }
+
+        buffer.clear();
+        Thread.sleep(100);
     }
 
     private void receiveMessages(SocketChannel serverChannel) {

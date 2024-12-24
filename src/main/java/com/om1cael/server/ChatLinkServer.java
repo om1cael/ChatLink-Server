@@ -46,7 +46,7 @@ public class ChatLinkServer {
                     if(key.isReadable()) {
                         if(key.channel() instanceof SocketChannel client) {
                             this.handleRegister(client);
-                            //this.handleEchoing();
+                            this.handleEchoing();
                         }
                     }
                 }
@@ -82,32 +82,36 @@ public class ChatLinkServer {
         clientList.put(client, clientUUID);
     }
 
-    /*private void handleEchoing() {
-        for(SocketChannel client : clientList) {
+    private void handleEchoing() {
+        clientList.forEach((clientChannel, uuid) -> {
             try {
-                int messageLength = client.read(buffer);
+                int messageLength = clientChannel.read(buffer);
                 buffer.flip();
 
                 if(messageLength == -1) {
-                    LOGGER.info("Client {} disconnected!", client.getRemoteAddress());
-                    clientList.remove(client);
-                    client.close();
+                    LOGGER.info("Client {} disconnected!", clientChannel.getRemoteAddress());
+                    clientList.remove(clientChannel);
+                    clientChannel.close();
                     return;
                 }
 
-                for(SocketChannel clientChannel : clientList) {
-                    if(clientChannel.isOpen()) {
+                clientList.forEach((client, clientUUID) -> {
+                    if(client.isOpen()) {
                         buffer.rewind();
                         while(buffer.hasRemaining()) {
-                            clientChannel.write(buffer);
+                            try {
+                                client.write(buffer);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
                     }
-                }
+                });
             } catch (IOException e) {
                 LOGGER.error("Client List: {}", clientList);
             } finally {
                 buffer.clear();
             }
-        }
-    }*/
+        });
+    }
 }
