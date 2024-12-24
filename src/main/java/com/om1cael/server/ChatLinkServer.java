@@ -11,13 +11,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatLinkServer {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private ByteBuffer buffer;
 
-    private final HashMap<SocketChannel, UUID> clientList = new HashMap<>();
+    private final ConcurrentHashMap<SocketChannel, UUID> clientList = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         new ChatLinkServer().startServer();
