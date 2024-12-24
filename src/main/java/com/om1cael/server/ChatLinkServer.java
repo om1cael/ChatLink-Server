@@ -10,16 +10,14 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 public class ChatLinkServer {
 
     private static final Logger LOGGER = LogManager.getLogger();
     private ByteBuffer buffer;
 
-    private final List<SocketChannel> clientList = new ArrayList<>(new HashSet<>());
+    private final HashMap<SocketChannel, UUID> clientList = new HashMap<>();
 
     public static void main(String[] args) {
         new ChatLinkServer().startServer();
@@ -46,7 +44,10 @@ public class ChatLinkServer {
                     }
 
                     if(key.isReadable()) {
-                        this.handleEchoing();
+                        if(key.channel() instanceof SocketChannel client) {
+                            this.handleRegister(client);
+                            //this.handleEchoing();
+                        }
                     }
                 }
 
@@ -63,7 +64,6 @@ public class ChatLinkServer {
                 SocketChannel client = serverChannel.accept();
                 client.configureBlocking(false);
                 client.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-                clientList.add(client);
 
                 LOGGER.info("New client connected from {}", client.getRemoteAddress());
             } catch (IOException e) {
@@ -72,7 +72,17 @@ public class ChatLinkServer {
         }
     }
 
-    private void handleEchoing() {
+    private void handleRegister(SocketChannel client) throws IOException {
+        if(clientList.containsKey(client)) return;
+
+        int messageLength = client.read(buffer);
+        buffer.flip();
+
+        UUID clientUUID = UUID.fromString(new String(buffer.array(), 0, messageLength));
+        clientList.put(client, clientUUID);
+    }
+
+    /*private void handleEchoing() {
         for(SocketChannel client : clientList) {
             try {
                 int messageLength = client.read(buffer);
@@ -99,5 +109,5 @@ public class ChatLinkServer {
                 buffer.clear();
             }
         }
-    }
+    }*/
 }
