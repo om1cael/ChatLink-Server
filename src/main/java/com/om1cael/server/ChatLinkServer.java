@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ChatLinkServer {
 
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = LogManager.getLogger(ChatLinkServer.class);
     private ByteBuffer buffer;
 
     private final ConcurrentHashMap<UUID, SocketChannel> clientList = new ConcurrentHashMap<>();
