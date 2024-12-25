@@ -91,10 +91,8 @@ public class ChatLinkServer {
         String content = new String(buffer.array(), 0, messageLength);
 
         if(this.chatList.containsKey(clientChannel)) {
-            this.handlePrivateChat();
-        }
-
-        if(content.startsWith("/") && !(this.chatList.containsValue(clientChannel))) {
+            this.handlePrivateChatMessages(clientChannel);
+        } else if(content.startsWith("/") && !(this.chatList.containsValue(clientChannel))) {
             String targetUUIDRaw = new String(buffer.array(), 0, messageLength);
             UUID targetUUID = UUID.fromString(targetUUIDRaw.split(" ")[1]);
 
@@ -113,8 +111,33 @@ public class ChatLinkServer {
         }
     }
 
-    private void handlePrivateChat() {
+    private void handlePrivateChatMessages(SocketChannel clientChannel) throws IOException {
+        clientChannel.read(buffer);
+        buffer.flip();
 
+        this.chatList.forEach((client, targetClient) -> {
+            if(client != clientChannel || targetClient != clientChannel) return;
+
+            if(client.isOpen() && targetClient.isOpen()) {
+                while(buffer.hasRemaining()) {
+                    try {
+                        client.write(buffer);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                buffer.rewind();
+
+                while(buffer.hasRemaining()) {
+                    try {
+                        targetClient.write(buffer);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        });
     }
 
     private void sendGlobalMessage() {
