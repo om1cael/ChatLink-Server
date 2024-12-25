@@ -30,6 +30,8 @@ public class ChatLink {
             serverChannel.connect(new InetSocketAddress(1024));
             this.sendUUIDToServer(serverChannel);
 
+            System.out.println("To connect with your friend, share your ID: " + getClientUUID());
+
             executorService.execute(() -> this.receiveMessages(serverChannel));
 
             while(true) {
@@ -53,7 +55,7 @@ public class ChatLink {
     }
 
     private void sendUUIDToServer(SocketChannel serverChannel) throws IOException {
-        UUID clientUUID = UUID.nameUUIDFromBytes(this.username.getBytes());
+        UUID clientUUID = getClientUUID();
         buffer.clear().put(clientUUID.toString().getBytes()).flip();
 
         while(buffer.hasRemaining()) {
@@ -61,10 +63,17 @@ public class ChatLink {
         }
     }
 
+    private UUID getClientUUID() {
+        return UUID.nameUUIDFromBytes(this.username.getBytes());
+    }
+
     private void handleMessageInput(Scanner scanner, SocketChannel serverChannel) throws IOException, InterruptedException {
         String inputMessage = scanner.nextLine();
+        String formattedMessage;
 
-        String formattedMessage = username + ": " + inputMessage;
+        if(inputMessage.startsWith("/")) formattedMessage = inputMessage;
+        else formattedMessage = username + ": " + inputMessage;
+
         buffer.clear().put(formattedMessage.getBytes()).flip();
 
         while(buffer.hasRemaining()) {
