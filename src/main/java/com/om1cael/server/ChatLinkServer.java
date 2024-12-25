@@ -108,6 +108,13 @@ public class ChatLinkServer {
         if(this.clientList.containsKey(targetUUID)) {
             SocketChannel targetClientChannel = this.clientList.get(targetUUID);
             this.chatList.put(clientChannel, targetClientChannel);
+
+            String joinedChatMessage = String.format("You are now in a private chat with %s", targetUUID);
+            buffer.clear().put(joinedChatMessage.getBytes()).flip();
+
+            chatList.forEach(this::sendPrivateChatMessage);
+
+            LOGGER.info("Creating a new private chat");
         }
     }
 
@@ -116,11 +123,15 @@ public class ChatLinkServer {
             if(client != clientChannel && targetClient != clientChannel) return;
 
             if(client.isOpen() && targetClient.isOpen()) {
-                sendMessage(client);
-                buffer.rewind();
-                sendMessage(targetClient);
+                sendPrivateChatMessage(client, targetClient);
             }
         });
+    }
+
+    private void sendPrivateChatMessage(SocketChannel client, SocketChannel targetClient) {
+        sendMessage(client);
+        buffer.rewind();
+        sendMessage(targetClient);
     }
 
     private void sendMessage(SocketChannel client) {
