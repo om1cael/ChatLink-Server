@@ -106,7 +106,6 @@ public class ChatLinkServer {
 
     private void createPrivateChat(SocketChannel clientChannel, UUID targetUUID) {
         if(this.clientList.containsKey(targetUUID)) {
-            LOGGER.info("Creating a new private chat");
             SocketChannel targetClientChannel = this.clientList.get(targetUUID);
             this.chatList.put(clientChannel, targetClientChannel);
         }
@@ -117,28 +116,31 @@ public class ChatLinkServer {
             if(client != clientChannel && targetClient != clientChannel) return;
 
             if(client.isOpen() && targetClient.isOpen()) {
-                while(buffer.hasRemaining()) {
-                    try {
-                        client.write(buffer);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-
+                sendMessage(client);
                 buffer.rewind();
-
-                while(buffer.hasRemaining()) {
-                    try {
-                        targetClient.write(buffer);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
+                sendMessage(targetClient);
             }
         });
     }
 
-    private void sendGlobalMessage() {
+    private void sendMessage(SocketChannel client) {
+        while(buffer.hasRemaining()) {
+            try {
+                client.write(buffer);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
+    private void sendGlobalMessage() {
+        List<SocketChannel> globalClients = this.clientList.values().stream()
+                .filter(client -> !(this.chatList.containsKey(client) || this.chatList.containsValue(client)))
+                .toList();
+
+        for(SocketChannel client : globalClients) {
+            sendMessage(client);
+            buffer.rewind();
+        }
     }
 }
