@@ -18,7 +18,8 @@ public class ChatLinkServer {
     private static final Logger LOGGER = LogManager.getLogger();
     private ByteBuffer buffer;
 
-    private final ConcurrentHashMap<SocketChannel, UUID> clientList = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, SocketChannel> clientList = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<SocketChannel, SocketChannel> chatList = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         new ChatLinkServer().startServer();
@@ -47,7 +48,7 @@ public class ChatLinkServer {
                     if(key.isReadable()) {
                         if(key.channel() instanceof SocketChannel client) {
                             this.handleRegister(client);
-                            this.handleEchoing();
+                            this.handleMessaging(client);
                         }
                     }
                 }
@@ -80,39 +81,43 @@ public class ChatLinkServer {
         buffer.flip();
 
         UUID clientUUID = UUID.fromString(new String(buffer.array(), 0, messageLength));
-        clientList.put(client, clientUUID);
+        clientList.put(clientUUID, client);
     }
 
-    private void handleEchoing() {
-        clientList.forEach((clientChannel, uuid) -> {
-            try {
-                int messageLength = clientChannel.read(buffer);
-                buffer.flip();
+    private void handleMessaging(SocketChannel clientChannel) throws IOException {
+        int messageLength = clientChannel.read(buffer);
+        buffer.flip();
 
-                if(messageLength == -1) {
-                    LOGGER.info("Client {} disconnected!", clientChannel.getRemoteAddress());
-                    clientList.remove(clientChannel);
-                    clientChannel.close();
-                    return;
-                }
+        String content = new String(buffer.array(), 0, messageLength);
 
-                clientList.forEach((client, clientUUID) -> {
-                    if(client.isOpen()) {
-                        buffer.rewind();
-                        while(buffer.hasRemaining()) {
-                            try {
-                                client.write(buffer);
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                    }
-                });
-            } catch (IOException e) {
-                LOGGER.error("Client List: {}", clientList);
-            } finally {
-                buffer.clear();
-            }
-        });
+        if(this.chatList.containsKey(clientChannel)) {
+            this.handlePrivateChat();
+        }
+
+        if(content.startsWith("/") && !(this.chatList.containsValue(clientChannel))) {
+            String targetUUIDRaw = new String(buffer.array(), 0, messageLength);
+            UUID targetUUID = UUID.fromString(targetUUIDRaw.split(" ")[1]);
+
+            this.createPrivateChat(clientChannel, targetUUID);
+        } else {
+            this.sendGlobalMessage();
+        }
+
+        buffer.clear();
+    }
+
+    private void createPrivateChat(SocketChannel clientChannel, UUID targetUUID) {
+        if(this.clientList.containsKey(targetUUID)) {
+            SocketChannel targetClientChannel = this.clientList.get(targetUUID);
+            this.chatList.put(clientChannel, targetClientChannel);
+        }
+    }
+
+    private void handlePrivateChat() {
+
+    }
+
+    private void sendGlobalMessage() {
+
     }
 }
