@@ -2,8 +2,8 @@
 
 Welcome to **ChatLinkServer**! This is a server built using Java's NIO package for the [ChatLink app](https://github.com/om1cael/ChatLink). It provides functionalities for both global and private messaging using UUIDs.
 
-> [!CAUTION]  
-> Don't use this server for any sensitive purpose, it's **NOT** been built with security in mind.
+> [!NOTE]  
+> This server is not meant to be used in real applications, but rather is a project to study Java's NIO networking.
 
 ## Features 🌟
 
